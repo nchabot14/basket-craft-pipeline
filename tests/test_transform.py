@@ -46,17 +46,17 @@ def test_transform_splits_by_month():
 
 
 def test_transform_deduplicates_order_ids():
-    # Same order_id appears twice (multi-item order) — should count as 1 order
+    # order_id 1 has two line items for the same product — one order, revenue summed
     rows = [
         {'order_id': 1, 'year_month': '2024-01-01', 'product_id': 1,
          'product_name': 'The Original Gift Basket', 'item_revenue': 49.99},
         {'order_id': 1, 'year_month': '2024-01-01', 'product_id': 1,
-         'product_name': 'The Original Gift Basket', 'item_revenue': 49.99},
+         'product_name': 'The Original Gift Basket', 'item_revenue': 25.00},
     ]
     result = transform(rows)
     assert result[0]['order_count'] == 1
-    assert result[0]['revenue_usd'] == 99.98
-    assert result[0]['avg_order_value_usd'] == 99.98
+    assert result[0]['revenue_usd'] == 74.99   # both line items summed
+    assert result[0]['avg_order_value_usd'] == 74.99  # revenue / 1 order
 
 
 def test_transform_empty_input():

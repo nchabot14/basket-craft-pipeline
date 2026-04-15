@@ -1,4 +1,5 @@
 from collections import defaultdict
+from decimal import Decimal, ROUND_HALF_UP
 
 
 def transform(rows):
@@ -23,19 +24,20 @@ def transform(rows):
     groups = defaultdict(lambda: {
         'product_name': '',
         'order_ids': set(),
-        'revenue': 0.0,
+        'revenue': Decimal('0'),
     })
 
     for row in rows:
         key = (row['year_month'], row['product_id'])
+        # product_name is consistent within a product_id; last-write is fine
         groups[key]['product_name'] = row['product_name']
         groups[key]['order_ids'].add(row['order_id'])
-        groups[key]['revenue'] += float(row['item_revenue'])
+        groups[key]['revenue'] += Decimal(str(row['item_revenue']))
 
     result = []
     for (year_month, product_id), data in sorted(groups.items()):
         order_count = len(data['order_ids'])
-        revenue = round(data['revenue'], 2)
+        revenue = float(data['revenue'].quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
         result.append({
             'year_month': year_month,
             'product_id': product_id,
