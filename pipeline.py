@@ -38,7 +38,7 @@ def extract():
                 FROM orders o
                 JOIN order_items oi ON o.order_id = oi.order_id
                 JOIN products    p  ON oi.product_id = p.product_id
-                ORDER BY 2, p.product_id
+                ORDER BY `year_month`, p.product_id
             """)
             return cursor.fetchall()
     finally:
