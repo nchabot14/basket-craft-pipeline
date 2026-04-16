@@ -7,6 +7,10 @@ from dotenv import load_dotenv
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 
+import psycopg2
+import psycopg2.extras
+from datetime import datetime, timezone
+
 load_dotenv()
 
 
@@ -90,3 +94,66 @@ def transform(rows):
             'avg_order_value_usd': round(revenue / order_count, 2),
         })
     return result
+
+
+def load(rows):
+    """
+    Truncate monthly_sales and insert all rows inside a single transaction.
+    Creates the table if it doesn't exist.
+    Rolls back and re-raises on any failure.
+
+    Args:
+        rows: list of dicts with keys:
+              year_month, product_id, product_name,
+              order_count, revenue_usd, avg_order_value_usd
+
+    Returns:
+        int — number of rows loaded
+
+    Raises:
+        AssertionError if 0 rows would be loaded (guard against wiping table)
+    """
+    assert rows, "Load produced empty table — aborting to protect destination"
+
+    conn = psycopg2.connect(
+        host=os.environ['POSTGRES_HOST'],
+        port=int(os.environ['POSTGRES_PORT']),
+        dbname=os.environ['POSTGRES_DB'],
+        user=os.environ['POSTGRES_USER'],
+        password=os.environ['POSTGRES_PASSWORD'],
+    )
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS monthly_sales (
+                    year_month            DATE           NOT NULL,
+                    product_id            INTEGER        NOT NULL,
+                    product_name          VARCHAR(50)    NOT NULL,
+                    order_count           INTEGER        NOT NULL,
+                    revenue_usd           NUMERIC(12,2)  NOT NULL,
+                    avg_order_value_usd   NUMERIC(10,2)  NOT NULL,
+                    loaded_at             TIMESTAMP      NOT NULL DEFAULT NOW(),
+                    PRIMARY KEY (year_month, product_id)
+                )
+            """)
+            cursor.execute("TRUNCATE monthly_sales")
+            loaded_at = datetime.now(timezone.utc)
+            psycopg2.extras.execute_batch(cursor, """
+                INSERT INTO monthly_sales
+                    (year_month, product_id, product_name,
+                     order_count, revenue_usd, avg_order_value_usd, loaded_at)
+                VALUES
+                    (%(year_month)s, %(product_id)s, %(product_name)s,
+                     %(order_count)s, %(revenue_usd)s, %(avg_order_value_usd)s,
+                     %(loaded_at)s)
+            """, [{**row, 'loaded_at': loaded_at} for row in rows])
+            cursor.execute("SELECT COUNT(*) FROM monthly_sales")
+            count = cursor.fetchone()[0]
+            assert count > 0, "Load produced empty table — aborting"
+        conn.commit()
+        return count
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
