@@ -1,4 +1,4 @@
-from pipeline import transform
+from pipeline import transform, _mysql_to_pg_type
 
 
 def test_transform_aggregates_revenue_and_order_count():
@@ -61,9 +61,6 @@ def test_transform_deduplicates_order_ids():
 
 def test_transform_empty_input():
     assert transform([]) == []
-
-
-from pipeline import _mysql_to_pg_type
 
 
 def test_mysql_to_pg_type_maps_common_types():
