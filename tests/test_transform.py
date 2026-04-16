@@ -61,3 +61,21 @@ def test_transform_deduplicates_order_ids():
 
 def test_transform_empty_input():
     assert transform([]) == []
+
+
+from pipeline import _mysql_to_pg_type
+
+
+def test_mysql_to_pg_type_maps_common_types():
+    assert _mysql_to_pg_type('int') == 'INTEGER'
+    assert _mysql_to_pg_type('int unsigned') == 'INTEGER'
+    assert _mysql_to_pg_type('smallint unsigned') == 'SMALLINT'
+    assert _mysql_to_pg_type('varchar(50)') == 'VARCHAR(50)'
+    assert _mysql_to_pg_type('decimal(6,2)') == 'NUMERIC(6,2)'
+    assert _mysql_to_pg_type('decimal(10,2)') == 'NUMERIC(10,2)'
+    assert _mysql_to_pg_type('timestamp') == 'TIMESTAMP'
+    assert _mysql_to_pg_type('text') == 'TEXT'
+
+
+def test_mysql_to_pg_type_unknown_falls_back_to_text():
+    assert _mysql_to_pg_type('blob') == 'TEXT'

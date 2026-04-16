@@ -14,6 +14,36 @@ from datetime import datetime, timezone
 load_dotenv()
 
 
+TABLES_TO_COPY = [
+    'employees',
+    'order_item_refunds',
+    'order_items',
+    'orders',
+    'products',
+    'users',
+    'website_pageviews',
+    'website_sessions',
+]
+
+
+def _mysql_to_pg_type(mysql_type):
+    t = mysql_type.lower()
+    if t.startswith('int'):
+        return 'INTEGER'
+    if t.startswith('smallint'):
+        return 'SMALLINT'
+    if t.startswith('varchar'):
+        return 'VARCHAR' + t[len('varchar'):]
+    if t.startswith('decimal'):
+        return 'NUMERIC' + t[len('decimal'):]
+    if t == 'timestamp':
+        return 'TIMESTAMP'
+    if t == 'text':
+        return 'TEXT'
+    print(f'Warning: unknown MySQL type "{mysql_type}", using TEXT')
+    return 'TEXT'
+
+
 def extract():
     """
     Connect to MySQL and return raw order-item rows joined with orders and products.
