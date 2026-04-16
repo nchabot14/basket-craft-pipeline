@@ -194,7 +194,7 @@ def load(rows):
 def extract_and_load_raw_table(mysql_conn, pg_conn, table_name):
     """
     Copy one MySQL table into PostgreSQL as-is.
-    Creates the table if it doesn't exist, truncates it, then bulk-inserts all rows.
+    Drops and recreates the table to reflect current MySQL schema, then bulk-inserts all rows.
     Commits after each table. Returns the number of rows inserted.
     """
     with mysql_conn.cursor() as cur:
@@ -209,19 +209,23 @@ def extract_and_load_raw_table(mysql_conn, pg_conn, table_name):
         for c in columns
     )
 
-    with pg_conn.cursor() as cur:
-        cur.execute(f'CREATE TABLE IF NOT EXISTS "{table_name}" ({col_defs})')
-        cur.execute(f'TRUNCATE "{table_name}"')
-        if rows:
-            col_list = ', '.join(f'"{name}"' for name in col_names)
-            placeholders = ', '.join(f'%({name})s' for name in col_names)
-            psycopg2.extras.execute_batch(
-                cur,
-                f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders})',
-                rows,
-                page_size=1000,
-            )
-    pg_conn.commit()
+    try:
+        with pg_conn.cursor() as cur:
+            cur.execute(f'DROP TABLE IF EXISTS "{table_name}"')
+            cur.execute(f'CREATE TABLE "{table_name}" ({col_defs})')
+            if rows:
+                col_list = ', '.join(f'"{name}"' for name in col_names)
+                placeholders = ', '.join(f'%({name})s' for name in col_names)
+                psycopg2.extras.execute_batch(
+                    cur,
+                    f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders})',
+                    rows,
+                    page_size=1000,
+                )
+        pg_conn.commit()
+    except Exception:
+        pg_conn.rollback()
+        raise
     return len(rows)
 
 
