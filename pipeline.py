@@ -159,3 +159,25 @@ def load(rows):
         raise
     finally:
         conn.close()
+
+
+def main():
+    print("Extracting from MySQL...")
+    rows = extract()
+    print(f"  Extracted {len(rows)} raw rows")
+
+    if not rows:
+        raise RuntimeError("No rows extracted — aborting to protect destination table")
+
+    print("Transforming...")
+    aggregated = transform(rows)
+    print(f"  Produced {len(aggregated)} aggregated rows")
+
+    print("Loading into PostgreSQL...")
+    count = load(aggregated)
+    print(f"  Loaded {count} rows into monthly_sales")
+    print("Done.")
+
+
+if __name__ == '__main__':
+    main()
