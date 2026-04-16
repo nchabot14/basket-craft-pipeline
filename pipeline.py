@@ -35,7 +35,7 @@ def extract():
             cursor.execute("""
                 SELECT
                     o.order_id,
-                    DATE_FORMAT(o.created_at, '%%Y-%%m-01') AS `year_month`,
+                    DATE_FORMAT(o.created_at, '%Y-%m-01') AS `year_month`,
                     p.product_id,
                     p.product_name,
                     oi.price_usd                            AS item_revenue
@@ -144,7 +144,7 @@ def load(rows):
                     (year_month, product_id, product_name,
                      order_count, revenue_usd, avg_order_value_usd, loaded_at)
                 VALUES
-                    (%(year_month)s, %(product_id)s, %(product_name)s,
+                    (%(year_month)s::DATE, %(product_id)s, %(product_name)s,
                      %(order_count)s, %(revenue_usd)s, %(avg_order_value_usd)s,
                      %(loaded_at)s)
             """, [{**row, 'loaded_at': loaded_at} for row in rows])
