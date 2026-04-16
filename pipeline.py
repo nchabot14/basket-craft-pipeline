@@ -229,6 +229,35 @@ def extract_and_load_raw_table(mysql_conn, pg_conn, table_name):
     return len(rows)
 
 
+def load_all_raw_tables():
+    """
+    Copy all raw MySQL tables into PostgreSQL.
+    Opens both connections once, loops over TABLES_TO_COPY, commits per table.
+    """
+    mysql_conn = pymysql.connect(
+        host=os.environ['MYSQL_HOST'],
+        port=int(os.environ['MYSQL_PORT']),
+        database=os.environ['MYSQL_DB'],
+        user=os.environ['MYSQL_USER'],
+        password=os.environ['MYSQL_PASSWORD'],
+        cursorclass=pymysql.cursors.DictCursor,
+    )
+    pg_conn = psycopg2.connect(
+        host=os.environ['POSTGRES_HOST'],
+        port=int(os.environ['POSTGRES_PORT']),
+        dbname=os.environ['POSTGRES_DB'],
+        user=os.environ['POSTGRES_USER'],
+        password=os.environ['POSTGRES_PASSWORD'],
+    )
+    try:
+        for table in TABLES_TO_COPY:
+            count = extract_and_load_raw_table(mysql_conn, pg_conn, table)
+            print(f'  {table}: {count} rows')
+    finally:
+        mysql_conn.close()
+        pg_conn.close()
+
+
 def main():
     print("Extracting from MySQL...")
     rows = extract()
