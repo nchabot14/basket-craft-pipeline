@@ -152,3 +152,15 @@ Acceptable for a class/dev environment. A production version would stream rows i
 ## Libraries
 
 No new dependencies. Uses existing `pymysql`, `psycopg2`, `psycopg2.extras`, and `python-dotenv`.
+
+---
+
+## Amendments (post-implementation)
+
+Two deviations from the original spec were made during implementation:
+
+1. **`DROP TABLE IF EXISTS` + `CREATE TABLE`** replaces `CREATE TABLE IF NOT EXISTS` + `TRUNCATE`. Rebuilding the schema on every run self-heals if a column is added, renamed, or retyped in MySQL — `IF NOT EXISTS` would freeze the destination schema at first run and silently diverge.
+
+2. **`try/except` with `pg_conn.rollback()`** wraps the PostgreSQL block in `extract_and_load_raw_table`. Without it, a mid-table failure would leave the shared psycopg2 connection in an aborted-transaction state, breaking every subsequent table in the orchestrator's loop.
+
+Both changes strengthen the truncate-and-reload contract; neither alters the public function signatures.

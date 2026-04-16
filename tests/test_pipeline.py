@@ -119,6 +119,8 @@ def test_extract_and_load_raw_table_copies_products():
         with pg_conn.cursor() as cur:
             cur.execute('SELECT COUNT(*) FROM "products"')
             assert cur.fetchone()[0] == 4
+            cur.execute('SELECT product_name FROM "products" ORDER BY product_id LIMIT 1')
+            assert cur.fetchone()[0] == 'The Original Gift Basket'
     finally:
         mysql_conn.close()
         pg_conn.close()
@@ -133,5 +135,7 @@ def test_load_all_raw_tables_runs_and_loads_products():
         with conn.cursor() as cur:
             cur.execute('SELECT COUNT(*) FROM "products"')
             assert cur.fetchone()[0] == 4
+            cur.execute('SELECT product_name FROM "products" ORDER BY product_id LIMIT 1')
+            assert cur.fetchone()[0] == 'The Original Gift Basket'
     finally:
         conn.close()
