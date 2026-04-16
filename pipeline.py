@@ -113,7 +113,8 @@ def load(rows):
     Raises:
         AssertionError if 0 rows would be loaded (guard against wiping table)
     """
-    assert rows, "Load produced empty table — aborting to protect destination"
+    if not rows:
+        raise ValueError("Load produced empty rows list — aborting to protect destination")
 
     conn = psycopg2.connect(
         host=os.environ['POSTGRES_HOST'],
@@ -132,7 +133,7 @@ def load(rows):
                     order_count           INTEGER        NOT NULL,
                     revenue_usd           NUMERIC(12,2)  NOT NULL,
                     avg_order_value_usd   NUMERIC(10,2)  NOT NULL,
-                    loaded_at             TIMESTAMP      NOT NULL DEFAULT NOW(),
+                    loaded_at             TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
                     PRIMARY KEY (year_month, product_id)
                 )
             """)
@@ -149,7 +150,8 @@ def load(rows):
             """, [{**row, 'loaded_at': loaded_at} for row in rows])
             cursor.execute("SELECT COUNT(*) FROM monthly_sales")
             count = cursor.fetchone()[0]
-            assert count > 0, "Load produced empty table — aborting"
+            if count == 0:
+                raise RuntimeError("INSERT succeeded but COUNT(*) returned 0 — aborting")
         conn.commit()
         return count
     except Exception:

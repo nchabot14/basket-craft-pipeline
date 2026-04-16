@@ -86,12 +86,12 @@ def test_load_replaces_previous_data():
     assert count == 1
     conn = _pg_conn()
     with conn.cursor() as cur:
-        cur.execute("SELECT product_id FROM monthly_sales")
+        cur.execute("SELECT product_id FROM monthly_sales ORDER BY product_id")
         product_ids = [row[0] for row in cur.fetchall()]
     conn.close()
     assert product_ids == [2]
 
 
 def test_load_raises_on_empty_rows():
-    with pytest.raises(AssertionError, match="empty table"):
+    with pytest.raises(ValueError, match="empty"):
         load([])
