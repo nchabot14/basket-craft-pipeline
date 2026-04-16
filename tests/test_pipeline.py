@@ -97,19 +97,6 @@ def test_load_raises_on_empty_rows():
         load([])
 
 
-def test_load_all_raw_tables_runs_and_loads_products():
-    # Copies all 8 tables — takes 2-5 minutes due to website_pageviews (1.2M rows)
-    from pipeline import load_all_raw_tables
-    load_all_raw_tables()  # should not raise
-    conn = _pg_conn()
-    try:
-        with conn.cursor() as cur:
-            cur.execute('SELECT COUNT(*) FROM "products"')
-            assert cur.fetchone()[0] == 4
-    finally:
-        conn.close()
-
-
 def test_extract_and_load_raw_table_copies_products():
     from pipeline import extract_and_load_raw_table
     import pymysql
@@ -135,3 +122,16 @@ def test_extract_and_load_raw_table_copies_products():
     finally:
         mysql_conn.close()
         pg_conn.close()
+
+
+def test_load_all_raw_tables_runs_and_loads_products():
+    # Copies all 8 tables — takes 2-5 minutes due to website_pageviews (1.2M rows)
+    from pipeline import load_all_raw_tables
+    load_all_raw_tables()  # should not raise
+    conn = _pg_conn()
+    try:
+        with conn.cursor() as cur:
+            cur.execute('SELECT COUNT(*) FROM "products"')
+            assert cur.fetchone()[0] == 4
+    finally:
+        conn.close()
