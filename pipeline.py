@@ -191,6 +191,40 @@ def load(rows):
         conn.close()
 
 
+def extract_and_load_raw_table(mysql_conn, pg_conn, table_name):
+    """
+    Copy one MySQL table into PostgreSQL as-is.
+    Creates the table if it doesn't exist, truncates it, then bulk-inserts all rows.
+    Commits after each table. Returns the number of rows inserted.
+    """
+    with mysql_conn.cursor() as cur:
+        cur.execute(f'DESCRIBE `{table_name}`')
+        columns = cur.fetchall()
+        cur.execute(f'SELECT * FROM `{table_name}`')
+        rows = cur.fetchall()
+
+    col_names = [c['Field'] for c in columns]
+    col_defs = ', '.join(
+        f'"{c["Field"]}" {_mysql_to_pg_type(c["Type"])}'
+        for c in columns
+    )
+
+    with pg_conn.cursor() as cur:
+        cur.execute(f'CREATE TABLE IF NOT EXISTS "{table_name}" ({col_defs})')
+        cur.execute(f'TRUNCATE "{table_name}"')
+        if rows:
+            col_list = ', '.join(f'"{name}"' for name in col_names)
+            placeholders = ', '.join(f'%({name})s' for name in col_names)
+            psycopg2.extras.execute_batch(
+                cur,
+                f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders})',
+                rows,
+                page_size=1000,
+            )
+    pg_conn.commit()
+    return len(rows)
+
+
 def main():
     print("Extracting from MySQL...")
     rows = extract()

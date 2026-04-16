@@ -95,3 +95,30 @@ def test_load_replaces_previous_data():
 def test_load_raises_on_empty_rows():
     with pytest.raises(ValueError, match="empty"):
         load([])
+
+
+def test_extract_and_load_raw_table_copies_products():
+    from pipeline import extract_and_load_raw_table
+    import pymysql
+    import pymysql.cursors
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    mysql_conn = pymysql.connect(
+        host=os.environ['MYSQL_HOST'],
+        port=int(os.environ['MYSQL_PORT']),
+        database=os.environ['MYSQL_DB'],
+        user=os.environ['MYSQL_USER'],
+        password=os.environ['MYSQL_PASSWORD'],
+        cursorclass=pymysql.cursors.DictCursor,
+    )
+    pg_conn = _pg_conn()
+    try:
+        count = extract_and_load_raw_table(mysql_conn, pg_conn, 'products')
+        assert count == 4
+        with pg_conn.cursor() as cur:
+            cur.execute('SELECT COUNT(*) FROM "products"')
+            assert cur.fetchone()[0] == 4
+    finally:
+        mysql_conn.close()
+        pg_conn.close()
