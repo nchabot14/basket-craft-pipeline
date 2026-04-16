@@ -273,6 +273,9 @@ def main():
     print("Loading into PostgreSQL...")
     count = load(aggregated)
     print(f"  Loaded {count} rows into monthly_sales")
+
+    print("Loading raw tables into PostgreSQL...")
+    load_all_raw_tables()
     print("Done.")
 
 
